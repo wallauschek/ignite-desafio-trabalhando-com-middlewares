@@ -10,6 +10,7 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
+  const { username } = request.headers;
   const user = users.find((user) => user.username === username);
 
   if (!user) {
@@ -24,17 +25,49 @@ function checksExistsUserAccount(request, response, next) {
 function checksCreateTodosUserAvailability(request, response, next) {
   const { user } = request;
   
-  if( user.pro || user.todos.length < 10 ) {
-    return next();
+  if( !user.pro && user.todos.length >= 10 ) {
+    return response.status(403).json({error: "your free plan has reached its limit"})
   }
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  app.use(checksExistsUserAccount)
+  const { username } = request.headers;
+
+  const { id } = request.params;
+  if(!validate(id)) {
+    return response.status(400).json({ error: "Error"});
+  }
+
+  const user = users.find((user)=>user.username === username);
+  if(!user) {
+    return response.status(404).json({ error: "Error"});
+  }
+
+  const todo = user.todos.find((todo) => todo.id === id);
+  if(!todo) {
+    return response.status(404).json({ error: "Error"});
+  }
+
+  request.todo = todo;
+  request.user = user;
+
+  return next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+
+  const user = users.find((user) => user.id === id);
+
+  if(!user) {
+    return response.status(404).json();
+  }
+
+  request.user = user;
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
